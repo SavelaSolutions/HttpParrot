@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <RootNamespace>HttpParrot</RootNamespace>
+        <PackageId>HttpParrot</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>Tommy Savela</Authors>
+        <Company>Savela Solutions AB</Company>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="HttpParrot.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    </ItemGroup>
+
+</Project>

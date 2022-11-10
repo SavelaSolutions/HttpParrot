@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpParrot", "HttpParrot\HttpParrot.csproj", "{8097E8B9-319A-4BBA-A845-057FCBC02F86}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpParrot.Tests", "HttpParrot.Tests\HttpParrot.Tests.csproj", "{738C8486-63BF-4477-9196-2AC833D6B2D0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8097E8B9-319A-4BBA-A845-057FCBC02F86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8097E8B9-319A-4BBA-A845-057FCBC02F86}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8097E8B9-319A-4BBA-A845-057FCBC02F86}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8097E8B9-319A-4BBA-A845-057FCBC02F86}.Release|Any CPU.Build.0 = Release|Any CPU
+		{738C8486-63BF-4477-9196-2AC833D6B2D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{738C8486-63BF-4477-9196-2AC833D6B2D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{738C8486-63BF-4477-9196-2AC833D6B2D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{738C8486-63BF-4477-9196-2AC833D6B2D0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
