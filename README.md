@@ -1,7 +1,8 @@
-# Record And Replay utilities
+# HTTP Parrot ("Record and Replay utilities")
 
-Contains tools for recording data that can later be used to "replay" the communication in tests,
-instead of having to create complicated mocks for the dependencies.
+Contains tools for recording HTTP responses when using HttpClient that can later be used to "replay" the communication in tests,
+instead of having to create complicated mocks for the external dependencies. That is, let the recorded HTTP responses be your mock data,
+that can also be changed if needed.
 
 ## Included components
 
@@ -13,15 +14,29 @@ Example test setup for ASP.NET Core application using a `IHttpClientFactory` "ty
 services.AddHttpClient<ISomeApiClient, SomeApiClient>()
     .AddHttpMessageHandler(serviceProvider =>
     {
-        // The below path to the cache directory is normally what's needed to put the cache in the
-        // test projects folder and not in the build output, so it can be source controlled.
-        return new RecordAndReplayEnabledMessageHandler(RecordAndReplayMode.RecordAndReplay,
-                    @"..\..\..\RecordReplayCache", identityProvider);
+        // The below path to the cache directory is normally what's needed to put the cache in the project folder and not in the build output.
+        return new RecordAndReplayEnabledMessageHandler(new RecordAndRelayOptions
+        {
+            Mode = RecordAndReplayMode.RecordAndReplay,
+            RelativeCacheDirectoryPath = @"..\..\..\RecordReplayCache",
+            IdentityProvider = identityProvider // Custom implementation of IRecordAndReplayIdentityProvider, if needed
+        });
     });
 ```
 
-The behavior of the `RecordAndReplayEnabledMessageHandler` is controlled by the `RecordAndReplayMode` enum
-passed to the constructor.
+If you want to add record & replay handlers too all clients generated from the IHttpClientFactory you can instead use
+`RecordAndReplayEnabledMessageHandlerExtensions.AddRecordAndReplayEnabledMessageHandlerToDefaultHttpClientFactory` as follows:
+
+```c#
+// Adds HttpParrot "record and replay" handler to all HttpClient instances generated from the default http client factory
+services.AddRecordAndReplayEnabledMessageHandlerToDefaultHttpClientFactory(new RecordAndRelayOptions
+{
+    Mode = RecordAndReplayMode.RecordAndReplay,
+    RelativeCacheDirectoryPath = @"..\..\..\RecordReplayCache"
+});
+```
+
+The behavior of the `RecordAndReplayEnabledMessageHandler` is controlled by the `RecordAndReplayMode` enum.
 
 ```c#
 public enum RecordAndReplayMode
@@ -48,9 +63,9 @@ public enum RecordAndReplayMode
 }
 ```
 
-The request body, query parameters and user identity (provided by a `IRecordAndReplayIdentityProvider` implementation
-passed to the constructor) are used to identify a specific request. The identity provider is only needed when a user identity is relevant for the calls,
-and not already part of the request body or query parameters.
+The request body, query parameters and user identity (provided by an optional `IRecordAndReplayIdentityProvider` implementation
+passed to the constructor) are used to identify a specific request. The identity provider is only needed when a user identity is relevant
+for the calls, and not already part of the request body or query parameters.
 
-Note that sometimes requests might contain a unique correlation id or similar (in the body, not as a header). In these cases the requests will not be
-determined identical, so steps has to be taken in the test setup to fix the correlation id to a specific value.
+Note that sometimes requests might contain a unique correlation id or similar (in the body, not as a header). In these cases the requests
+will not be determined identical, so steps has to be taken in the test setup to pin the correlation id to a specific value.

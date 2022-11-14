@@ -19,41 +19,44 @@ namespace HttpParrot
     /// services.AddHttpClient&lt;IApiClient, ApiClient&gt;().AddHttpMessageHandler(serviceProvider =>
     /// {
     ///     // The below path to the cache directory is normally what's needed to put the cache in the project folder and not in the build output.
-    ///     return new RecordAndReplayEnabledMessageHandler(RecordAndReplayMode.RecordAndReplay,
-    ///                 @"..\..\..\RecordReplayCache", identityProvider);
+    ///     return new RecordAndReplayEnabledMessageHandler(new RecordAndRelayOptions
+    ///     {
+    ///         Mode = RecordAndReplayMode.RecordAndReplay,
+    ///         RelativeCacheDirectoryPath = @"..\..\..\RecordReplayCache",
+    ///         IdentityProvider = identityProvider // Custom implementation of IRecordAndReplayIdentityProvider, if needed
+    ///     });
     /// });
     /// </code>
+    /// If you want to add handlers too all clients generated from the IHttpClientFactory you can instead use
+    /// <see cref="RecordAndReplayEnabledMessageHandlerExtensions.AddRecordAndReplayEnabledMessageHandlerToDefaultHttpClientFactory"/>.
     /// </example>
     public class RecordAndReplayEnabledMessageHandler : DelegatingHandler
     {
         private readonly IRecordAndReplayIdentityProvider _identityProvider;
         private static readonly SemaphoreSlim FileSemaphore = new SemaphoreSlim(1, 1);
         private readonly SHA256 _sha256 = SHA256.Create();
+        
+        public string RelativeCacheDirectoryPath { get; }
+        public string AbsoluteCacheDirectoryPath =>
+            Path.Combine(new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory).FullName, RelativeCacheDirectoryPath);
+        public RecordAndReplayMode Mode { get; }
+        // TODO: Rename
+        public bool IncludeQueryParameters { get; }
+        // TODO: Rename
+        public bool IncludeBody { get; }
 
         /// <summary>
         /// Creates a DelegatingHandler that will record and replay requests going through it. The mode parameter is used to define the behavior.
         /// </summary>
-        /// <param name="mode">The record and replay mode that this handler should use. See documentation on <see cref="RecordAndReplayMode"/> enum for details.</param>
-        /// <param name="relativeCacheDirectoryPath">The relative path to the cache directory. Note that when running tests, the current path is normally the build output folder,
-        /// so setting a path two levels up will put them in the project directory, to be able to be source controlled.</param>
-        /// <param name="identityProvider">Optional identity provider. The identity will be included when generating the filename hashes, to be able to differentiate
-        /// between users if the user identity is not part of the request payload or query.</param>
-        public RecordAndReplayEnabledMessageHandler(RecordAndReplayMode mode, string relativeCacheDirectoryPath, IRecordAndReplayIdentityProvider identityProvider = null)
+        /// <param name="options">Options for this message handler.</param>
+        public RecordAndReplayEnabledMessageHandler(RecordAndRelayOptions options)
         {
-            _identityProvider = identityProvider ?? new NoIdentityProvider();
-            Mode = mode;
-            RelativeCacheDirectoryPath = relativeCacheDirectoryPath?.Replace('\\', Path.DirectorySeparatorChar) ?? "cache";
+            _identityProvider = options.IdentityProvider ?? new NoIdentity();
+            Mode = options.Mode;
+            RelativeCacheDirectoryPath = options.RelativeCacheDirectoryPath?.Replace('\\', Path.DirectorySeparatorChar) ?? "cache";
+            IncludeQueryParameters = options.IncludeQueryParametersWhenMatchingResponse;
+            IncludeBody = options.IncludeBodyWhenMatchingResponse;
         }
-
-        public string RelativeCacheDirectoryPath { get; }
-
-        public string AbsoluteCacheDirectoryPath =>
-            Path.Combine(new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory).FullName, RelativeCacheDirectoryPath);
-
-        /// <summary>
-        /// The <see cref="RecordAndReplayMode"/> behavior of this handler instance.
-        /// </summary>
-        public RecordAndReplayMode Mode { get; }
 
         private void EnsureCacheDirectoryExists()
         {
@@ -146,8 +149,9 @@ namespace HttpParrot
             var text = Encoding.UTF8.GetString(memoryStream.ToArray());
             try
             {
-                // Attempt json prettify if text starts with a curly brace
-                if (text.StartsWith("{")) text = text.NonDestructiveJsonPrettify();
+                // Attempt json prettify if text might be json
+                if ((text.StartsWith("{") && text.EndsWith("}")) || (text.StartsWith("[") && text.EndsWith("]")))
+                    text = text.NonDestructiveJsonPrettify();
             }
             catch
             {
@@ -199,12 +203,14 @@ namespace HttpParrot
             }
         }
 
-        internal async Task<string> GetFileName(HttpMethod method, Uri requestUri, HttpRequestMessage request)
+        private async Task<string> GetFileName(HttpMethod method, Uri requestUri, HttpRequestMessage request)
         {
             var body = await ExtractRequestContentAsync(request);
             var queryParameters = request.RequestUri.Query;
             var identity = _identityProvider.GetUserIdentifier();
-            return $"{(requestUri.Host + requestUri.AbsolutePath).Replace('/', '-')}-{method}-{Hash(body + queryParameters + identity)}.json";
+            var hashInput = (IncludeBody ? body : "") + (IncludeQueryParameters ? queryParameters : "") + identity;
+            var hash = Hash(hashInput);
+            return $"{(requestUri.Host + requestUri.AbsolutePath).Replace('/', '-')}-{method}-{hash}.json";
         }
 
         private string Hash(string input)
@@ -214,14 +220,6 @@ namespace HttpParrot
             foreach (var num in hash)
                 stringBuilder.Append(num.ToString("X2"));
             return stringBuilder.ToString();
-        }
-
-        private class NoIdentityProvider : IRecordAndReplayIdentityProvider
-        {
-            public string GetUserIdentifier()
-            {
-                return string.Empty;
-            }
         }
     }
 }
