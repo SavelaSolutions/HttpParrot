@@ -1,0 +1,8 @@
+﻿BuiltPackages
+*.user
+.idea
+.vs
+
+bin/
+obj/
+packages
