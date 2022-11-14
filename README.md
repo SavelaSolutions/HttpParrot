@@ -63,9 +63,20 @@ public enum RecordAndReplayMode
 }
 ```
 
-The request body, query parameters and user identity (provided by an optional `IRecordAndReplayIdentityProvider` implementation
-passed to the constructor) are used to identify a specific request. The identity provider is only needed when a user identity is relevant
-for the calls, and not already part of the request body or query parameters.
+The request body, query parameters and user identity can also be used to identify a specific request by setting the corresponding properties in the
+`RecordAndRelayOptions` like so:
+
+```c#
+new RecordAndReplayEnabledMessageHandler(new RecordAndRelayOptions
+    {
+        ...
+        IncludeQueryParametersWhenMatchingResponse = true,
+        IncludeBodyWhenMatchingResponse = true
+        IdentityProvider = new CustomIdentityProvider() // Implementation of IRecordAndReplayIdentityProvider
+    });
+```
+
+The identity provider is only needed when the user identity is relevant for the calls, and not already part of the request body or query parameters.
 
 Note that sometimes requests might contain a unique correlation id or similar (in the body, not as a header). In these cases the requests
 will not be determined identical, so steps has to be taken in the test setup to pin the correlation id to a specific value.
